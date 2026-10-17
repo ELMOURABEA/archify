@@ -8,24 +8,55 @@ permissions:
   contents: write
 
 jobs:
+  windows-test-portability:
+    name: Windows path contracts (Node ${{ matrix.node-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install test dependencies
+        run: npm ci --ignore-scripts && npm --prefix archify ci --ignore-scripts
+      - name: Provision controlled Windows path fixtures
+        shell: pwsh
+        run: scripts/windows-path-fixtures.ps1 -NodeVersion '${{ matrix.node-version }}'
+      - name: Verify maintained Windows path contracts
+        run: node scripts/run-windows-path-tests.mjs ${{ matrix.node-version == 24 && '--smoke' || '' }}
+        env:
+          ARCHIFY_REQUIRE_WINDOWS_8DOT3: '1'
+          ARCHIFY_REQUIRE_WINDOWS_REAL_PATHS: '1'
+      - name: Clean up controlled Windows path fixtures
+        if: ${{ always() }}
+        shell: pwsh
+        run: scripts/windows-path-fixtures.ps1 -NodeVersion '${{ matrix.node-version }}' -Cleanup
+
   release:
+    needs: windows-test-portability
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Fetch exact tag object
+        shell: bash
+        run: git fetch --force --no-tags origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: archify/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            archify/package-lock.json
       - name: Install renderer dependencies
-        run: npm ci
-        working-directory: archify
-      - name: Tests must pass before releasing
-        run: npm test
-        working-directory: archify
+        run: npm ci && npm --prefix archify ci
+      - name: Complete regression suite on canonical Node before releasing
+        run: npm run test:full
       - name: Provision a known Chrome runtime
         id: setup-chrome
-        uses: browser-actions/setup-chrome@v2
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
           chrome-version: stable
           install-dependencies: true
@@ -33,9 +64,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y ffmpeg
       - name: WebM export must contain distinct decoded frames
         run: npm run test:webm
-        working-directory: archify
         env:
           ARCHIFY_CHROME: ${{ steps.setup-chrome.outputs.chrome-path }}
+      - name: Run shared browser regression gate
+        run: npm run test:browser
+        env:
+          ARCHIFY_CHROME: ${{ steps.setup-chrome.outputs.chrome-path }}
+          ARCHIFY_CHROME_NO_SANDBOX: '1'
       - name: Tag must match package.json version
         run: |
           pkg_version="$(node -p "require('./archify/package.json').version")"
@@ -90,7 +125,7 @@ jobs:
       - name: Committed zip must match the build (same gate as CI)
         run: cmp -s /tmp/archify-built.zip archify.zip
       - name: Create GitHub Release with the zip attached
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: archify.zip
           generate_release_notes: true
@@ -99,4 +134,8 @@ jobs:
       - name: Record stable notifier publication follow-up
         if: steps.release-kind.outputs.prerelease == 'false'
         run: |
+          echo '[Complete the central release checklist](https://github.com/tt-a1i/archify/blob/main/CONTRIBUTING.md#release-checklist), including final-head evidence and public acceptance.' >> "$GITHUB_STEP_SUMMARY"
           echo 'After the repository Pages source is set to GitHub Actions, publish docs/skill-updates/archify/stable.json in a follow-up commit; the gated deploy job will verify this Release, its archify.zip digest, and the tagged Skill tree before exposure.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Record DSH synchronization follow-up
+        run: |
+          echo '[Central release checklist](https://github.com/tt-a1i/archify/blob/main/CONTRIBUTING.md#release-checklist), including [DSH synchronization](https://github.com/tt-a1i/archify/blob/main/CONTRIBUTING.md#release-checklist-dsh-synchronization): record the pinned DSH bundle update and verification, or an explicit deferral. Archify release publication does not publish the independently versioned DSH plugin; keep npm/tag/README/community status accurate until that separate release is verified.' >> "$GITHUB_STEP_SUMMARY"

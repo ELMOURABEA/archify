@@ -95,12 +95,16 @@ node bin/archify.mjs compare architecture base.json head.json \
   architecture-delta.html --quality showcase --json
 ```
 
+Repository revision, provider, link mode, or location representation changes are reported separately from component, relationship, and boundary changes. The Delta page never marks a graph entity as changed for provenance alone, and it does not expose repository URLs in the provenance summary.
+
 ## 6. Inspect the exact final file
 
-The deterministic checks do not prove visual polish. Open the exact delivered HTML in a browser, or collect automated containment evidence when Chrome or Chromium is available:
+The deterministic checks do not exercise the Viewer in a browser. Collect automated browser evidence from the exact delivered HTML when Chrome or Chromium is available:
 
 ```bash
 node bin/archify.mjs visual-check web-app.html --json
 ```
 
-Use the [delivery contract](../archify/references/delivery-contract.md) for the required visual-review status and handoff fields. The [Skill contract](../archify/SKILL.md) explains the authoring invariants and the bounded repair loop.
+This receipt measures bounded runtime behavior; it does not approve perceptual polish. Inspect the HTML or generated screenshots separately. Follow the [delivery contract](../archify/references/delivery-contract.md) when recording supplementary manual browser work; an unconstrained glance supports only perceptual review.
+
+Use the delivery contract for the canonical browser-evidence coverage, artifact binding, visual-review status, and handoff fields. The [Skill contract](../archify/SKILL.md) explains the authoring invariants and the bounded repair loop.

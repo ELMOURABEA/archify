@@ -14,7 +14,10 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ]
     },
     "diagram_type": {
       "const": "workflow"
@@ -23,7 +26,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "title"
+        "title",
+        "output"
       ],
       "properties": {
         "title": {
@@ -33,20 +37,37 @@
         "locale": {
           "$ref": "common.schema.json#/$defs/locale"
         },
+        "translations": {
+          "$ref": "common.schema.json#/$defs/translations"
+        },
         "subtitle": {
           "type": "string"
         },
         "output": {
-          "type": "string"
+          "$ref": "common.schema.json#/$defs/portableOutputPath"
         },
         "animation": {
-          "$ref": "common.schema.json#/$defs/animation"
+          "enum": [
+            "trace",
+            "none"
+          ]
         },
         "visual_preset": {
-          "$ref": "common.schema.json#/$defs/visualPreset"
+          "enum": [
+            "classic",
+            "signal-flow",
+            "blueprint",
+            "editorial"
+          ]
         },
         "quality_profile": {
-          "$ref": "common.schema.json#/$defs/qualityProfile"
+          "enum": [
+            "standard",
+            "showcase"
+          ]
+        },
+        "repository": {
+          "$ref": "common.schema.json#/$defs/repository"
         },
         "views": {
           "$ref": "common.schema.json#/$defs/guidedViews"
@@ -146,7 +167,12 @@
             "maximum": 5
           },
           "variant": {
-            "$ref": "common.schema.json#/$defs/variant"
+            "enum": [
+              "default",
+              "emphasis",
+              "security",
+              "dashed"
+            ]
           }
         }
       }
@@ -185,7 +211,12 @@
             "maximum": 5
           },
           "variant": {
-            "$ref": "common.schema.json#/$defs/variant"
+            "enum": [
+              "default",
+              "emphasis",
+              "security",
+              "dashed"
+            ]
           }
         }
       }
@@ -195,6 +226,37 @@
       "minItems": 2,
       "items": {
         "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "semanticChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "allowedRoots": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "allowedTerminals": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "requiredEdges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/semanticRelation"
+          }
+        },
+        "requiredPaths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/semanticRelation"
+          }
+        }
       }
     },
     "nodes": {
@@ -235,8 +297,12 @@
           "tag": {
             "type": "string"
           },
+          "icon": { "$ref": "common.schema.json#/$defs/nodeIcon" },
           "brand": {
             "$ref": "common.schema.json#/$defs/brandMark"
+          },
+          "sources": {
+            "$ref": "common.schema.json#/$defs/sourceReferences"
           },
           "width": {
             "type": "number",
@@ -287,10 +353,10 @@
             ]
           },
           "fromSide": {
-            "$ref": "common.schema.json#/$defs/side"
+            "$ref": "#/$defs/side"
           },
           "toSide": {
-            "$ref": "common.schema.json#/$defs/side"
+            "$ref": "#/$defs/side"
           },
           "route": {
             "enum": [
@@ -334,13 +400,40 @@
             "maximum": 1
           },
           "width": {
-            "$ref": "common.schema.json#/$defs/relationshipWidth"
+            "type": "number",
+            "minimum": 0.5
           }
         }
       }
     },
     "cards": {
       "$ref": "common.schema.json#/$defs/cards"
+    }
+  },
+  "$defs": {
+    "semanticRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "to": {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      }
+    },
+    "side": {
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom"
+      ]
     }
   }
 }

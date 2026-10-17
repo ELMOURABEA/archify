@@ -3,8 +3,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SCENARIO_RECIPES } from '../archify/recipes/scenarios.mjs';
+import { SCENARIO_RECIPES, startPromptsFor } from '../archify/recipes/scenarios.mjs';
 import { copySiteAssets } from './copy-site-assets.mjs';
+import { diagramTypeCopyReplacements } from './site-copy.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -18,6 +19,7 @@ const START_RECIPE_IDS = Object.freeze({
   sequence: 'api-request',
   dataflow: 'event-stream',
   lifecycle: 'object-lifecycle',
+  erd: 'database-schema',
 });
 
 const startData = Object.fromEntries(Object.entries(START_RECIPE_IDS).map(([type, id]) => {
@@ -25,13 +27,21 @@ const startData = Object.fromEntries(Object.entries(START_RECIPE_IDS).map(([type
   if (!recipe || recipe.type !== type) {
     throw new Error(`Missing canonical start recipe ${JSON.stringify(id)} for ${type}.`);
   }
+  const enPrompts = startPromptsFor(recipe, 'en');
+  const zhPrompts = startPromptsFor(recipe, 'zh');
   return [type, {
     id: recipe.id,
     type: recipe.type,
     proof: recipe.proof,
     presentation: recipe.presentation,
-    en: recipe.en,
-    zh: recipe.zh,
+    en: {
+      ...recipe.en,
+      ...enPrompts,
+    },
+    zh: {
+      ...recipe.zh,
+      ...zhPrompts,
+    },
   }];
 }));
 
@@ -41,6 +51,7 @@ const startJson = JSON.stringify(startData)
   .replaceAll('>', '\\u003e');
 
 const replacements = {
+  ...diagramTypeCopyReplacements(),
   '[[ARCHIFY_VERSION]]': packageJson.version,
   '[[START_JSON]]': startJson,
 };
